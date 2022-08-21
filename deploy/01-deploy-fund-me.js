@@ -27,6 +27,7 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
     args: args, // puszczam PriceFeedAddress jako argument
     // log: true oznacza ze podczas deolpjowania w konsoli pojawi sie sporo przydatnego info
     log: true,
+    waitConfirmations: network.config.blockConfirmations || 1,
   })
 
   if (
