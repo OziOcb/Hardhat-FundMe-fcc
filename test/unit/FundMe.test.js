@@ -66,7 +66,13 @@ describe("FundMe", function () {
 
         // Act
         const transactionResponse = await fundMe.withdraw()
-        const transactionRecept = await transactionResponse.wait(1)
+        const transactionReceipt = await transactionResponse.wait(1)
+        // Obliczam koszt gazu ktory zaostal zluzyty na odpalenie metody .withdraw
+        // Poniewaz gasUsed i effectiveGasPrice sa BigNumbers, uzywam metody .mul()
+        // zeby podzielic gasUsed przez effectiveGasPrice (mul = multiply)
+        const { gasUsed, effectiveGasPrice } = transactionReceipt
+        const gasCost = gasUsed.mul(effectiveGasPrice)
+        //    ^^^^^^^
 
         const endingFundMeBalance = await fundMe.provider.getBalance(
           fundMe.address
@@ -75,9 +81,13 @@ describe("FundMe", function () {
 
         // Assert
         expect(endingFundMeBalance).to.equal(0)
+        // Uwaga! Pamietaj ze podczas odpalenia metody .withdraw
+        // troche ETH zostanie wydane na pokrycie kosztow gazu
+        // Dlatego w ponizszym tescie dodaje gasCost
         expect(
           startingFundMeBalance.add(startingDeployerBalance).toString()
         ).to.equal(endingDeployerBalance.add(gasCost).toString())
+        //                              ^^^^^^^^^^^^^
       })
 
       // it("", async function () {})
