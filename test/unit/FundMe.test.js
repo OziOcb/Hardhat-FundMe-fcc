@@ -25,7 +25,7 @@ describe("FundMe", function () {
 
   describe("constructor", function () {
     it("sets the aggregator address correctly", async function () {
-      const response = await fundMe.priceFeed()
+      const response = await fundMe.s_priceFeed()
       // assert.equal(response, mockV3Aggregator.address)
       expect(response).to.equal(mockV3Aggregator.address)
     })
@@ -39,13 +39,13 @@ describe("FundMe", function () {
     })
     it("updates the amount funded data structure", async function () {
       await fundMe.fund({ value: sendValue })
-      const response = await fundMe.addressToAmountFunded(deployer)
+      const response = await fundMe.s_addressToAmountFunded(deployer)
       expect(response.toString()).to.equal(sendValue.toString())
     })
 
-    it("Adds funder to array of funders", async function () {
+    it("Adds funder to array of s_funders", async function () {
       await fundMe.fund({ value: sendValue })
-      const funder = await fundMe.funders(0)
+      const funder = await fundMe.s_funders(0)
       expect(funder).to.equal(deployer)
     })
 
@@ -93,7 +93,7 @@ describe("FundMe", function () {
         //                              ^^^^^^^^^^^^^
       })
 
-      it("allows us to withdraw with multiple funders", async function () {
+      it("allows us to withdraw with multiple s_funders", async function () {
         // Arrange
         // Pobieram liste dostepnych adresow/portfeli
         const accounts = await ethers.getSigners()
@@ -126,13 +126,13 @@ describe("FundMe", function () {
           startingFundMeBalance.add(startingDeployerBalance).toString()
         ).to.equal(endingDeployerBalance.add(gasCost).toString())
 
-        // Upewniam sie ze funders zostalo zresetowane
-        // Czuli tablica funders powinna byc pusta
+        // Upewniam sie ze s_funders zostalo zresetowane
+        // Czuli tablica s_funders powinna byc pusta
         // a kazdy z funderow powininen pokazywac 0 jako ilsoc przelanego hajsu
-        await expect(fundMe.funders(0)).to.be.reverted
+        await expect(fundMe.s_funders(0)).to.be.reverted
         for (let i = 1; i < 6; i++) {
           assert.equal(
-            await fundMe.addressToAmountFunded(accounts[i].address),
+            await fundMe.s_addressToAmountFunded(accounts[i].address),
             0
           )
         }
@@ -145,6 +145,89 @@ describe("FundMe", function () {
         await expect(attackerConnectedContract.withdraw()).to.be.revertedWith(
           "FundMe__NotOwner"
         )
+      })
+
+      it("cheaperWithdraw testing...", async function () {
+        // Arrange
+        // Pobieram liste dostepnych adresow/portfeli
+        const accounts = await ethers.getSigners()
+        // Robiac loopa przelewam srodki z 6 portfeli
+        for (let i = 1; i < 6; i++) {
+          const fundMeConnectedContract = await fundMe.connect(accounts[i])
+          await fundMeConnectedContract.fund({ value: sendValue })
+        }
+        const startingFundMeBalance = await fundMe.provider.getBalance(
+          fundMe.address
+        )
+        const startingDeployerBalance = await fundMe.provider.getBalance(
+          deployer
+        )
+
+        // Act
+        const txResponse = await fundMe.cheaperWithdraw()
+        const txReceipt = await txResponse.wait(1)
+        const { gasUsed, effectiveGasPrice } = txReceipt
+        const gasCost = gasUsed.mul(effectiveGasPrice)
+
+        // Assert
+        const endingFundMeBalance = await fundMe.provider.getBalance(
+          fundMe.address
+        )
+        const endingDeployerBalance = await fundMe.provider.getBalance(deployer)
+
+        expect(endingFundMeBalance).to.equal(0)
+        expect(
+          startingFundMeBalance.add(startingDeployerBalance).toString()
+        ).to.equal(endingDeployerBalance.add(gasCost).toString())
+
+        // Upewniam sie ze s_funders zostalo zresetowane
+        // Czuli tablica s_funders powinna byc pusta
+        // a kazdy z funderow powininen pokazywac 0 jako ilsoc przelanego hajsu
+        await expect(fundMe.s_funders(0)).to.be.reverted
+        for (let i = 1; i < 6; i++) {
+          assert.equal(
+            await fundMe.s_addressToAmountFunded(accounts[i].address),
+            0
+          )
+        }
+      })
+
+      it("cheaperWithdraw ETH from a single founder", async function () {
+        // Arrange
+        const startingFundMeBalance = await fundMe.provider.getBalance(
+          fundMe.address
+        )
+        const startingDeployerBalance = await fundMe.provider.getBalance(
+          deployer
+        )
+
+        // Act
+        const transactionResponse = await fundMe.cheaperWithdraw()
+        const transactionReceipt = await transactionResponse.wait(1)
+        // Obliczam koszt gazu ktory zaostal zluzyty na odpalenie metody .withdraw
+        // Poniewaz gasUsed i effectiveGasPrice sa BigNumbers, uzywam metody .mul()
+        // zeby podzielic gasUsed przez effectiveGasPrice (mul = multiply)
+        const { gasUsed, effectiveGasPrice } = transactionReceipt
+        const gasCost = gasUsed.mul(effectiveGasPrice)
+        //    ^^^^^^^
+
+        const endingFundMeBalance = await fundMe.provider.getBalance(
+          fundMe.address
+        )
+        const endingDeployerBalance = await fundMe.provider.getBalance(deployer)
+
+        // Assert
+        expect(endingFundMeBalance).to.equal(0)
+        // Uwaga! Pamietaj ze podczas odpalenia metody .withdraw
+        // troche ETH zostanie wydane na pokrycie kosztow gazu
+        // Dlatego w ponizszym tescie dodaje gasCost
+        // Ogolnie ten test dodaje poczatkowy balans kontraktu z
+        // poczatkowym balansem deployera i porownuje wynik z
+        // koncowym balansem deployera (pamietajac o odjeciiu hajsu za gaz)
+        expect(
+          startingFundMeBalance.add(startingDeployerBalance).toString()
+        ).to.equal(endingDeployerBalance.add(gasCost).toString())
+        //                              ^^^^^^^^^^^^^
       })
       // it("", async function () {})
     })
