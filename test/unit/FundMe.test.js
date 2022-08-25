@@ -25,7 +25,7 @@ describe("FundMe", function () {
 
   describe("constructor", function () {
     it("sets the aggregator address correctly", async function () {
-      const response = await fundMe.s_priceFeed()
+      const response = await fundMe.getPriceFeed()
       // assert.equal(response, mockV3Aggregator.address)
       expect(response).to.equal(mockV3Aggregator.address)
     })
@@ -39,13 +39,13 @@ describe("FundMe", function () {
     })
     it("updates the amount funded data structure", async function () {
       await fundMe.fund({ value: sendValue })
-      const response = await fundMe.s_addressToAmountFunded(deployer)
+      const response = await fundMe.getAddressToAmountFunded(deployer)
       expect(response.toString()).to.equal(sendValue.toString())
     })
 
-    it("Adds funder to array of s_funders", async function () {
+    it("Adds funder to array of getFunders", async function () {
       await fundMe.fund({ value: sendValue })
-      const funder = await fundMe.s_funders(0)
+      const funder = await fundMe.getFunders(0)
       expect(funder).to.equal(deployer)
     })
 
@@ -93,7 +93,7 @@ describe("FundMe", function () {
         //                              ^^^^^^^^^^^^^
       })
 
-      it("allows us to withdraw with multiple s_funders", async function () {
+      it("allows us to withdraw with multiple getFunders", async function () {
         // Arrange
         // Pobieram liste dostepnych adresow/portfeli
         const accounts = await ethers.getSigners()
@@ -126,13 +126,13 @@ describe("FundMe", function () {
           startingFundMeBalance.add(startingDeployerBalance).toString()
         ).to.equal(endingDeployerBalance.add(gasCost).toString())
 
-        // Upewniam sie ze s_funders zostalo zresetowane
-        // Czuli tablica s_funders powinna byc pusta
+        // Upewniam sie ze getFunders zostalo zresetowane
+        // Czuli tablica getFunders powinna byc pusta
         // a kazdy z funderow powininen pokazywac 0 jako ilsoc przelanego hajsu
-        await expect(fundMe.s_funders(0)).to.be.reverted
+        await expect(fundMe.getFunders(0)).to.be.reverted
         for (let i = 1; i < 6; i++) {
           assert.equal(
-            await fundMe.s_addressToAmountFunded(accounts[i].address),
+            await fundMe.getAddressToAmountFunded(accounts[i].address),
             0
           )
         }
@@ -180,13 +180,13 @@ describe("FundMe", function () {
           startingFundMeBalance.add(startingDeployerBalance).toString()
         ).to.equal(endingDeployerBalance.add(gasCost).toString())
 
-        // Upewniam sie ze s_funders zostalo zresetowane
-        // Czuli tablica s_funders powinna byc pusta
+        // Upewniam sie ze getFunders zostalo zresetowane
+        // Czuli tablica getFunders powinna byc pusta
         // a kazdy z funderow powininen pokazywac 0 jako ilsoc przelanego hajsu
-        await expect(fundMe.s_funders(0)).to.be.reverted
+        await expect(fundMe.getFunders(0)).to.be.reverted
         for (let i = 1; i < 6; i++) {
           assert.equal(
-            await fundMe.s_addressToAmountFunded(accounts[i].address),
+            await fundMe.getAddressToAmountFunded(accounts[i].address),
             0
           )
         }
